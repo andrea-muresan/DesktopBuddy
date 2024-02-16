@@ -1,3 +1,4 @@
+import time
 import tkinter as tk
 from win32api import GetMonitorInfo, MonitorFromPoint
 
@@ -12,7 +13,14 @@ class Buddy:
         self.window = tk.Tk()
 
         # placeholder image
-        img = tk.PhotoImage(file='assets/brown_cat/idle1.png')
+        self.idle = [tk.PhotoImage(file='assets/brown_cat/idle1.png'), tk.PhotoImage(file='assets/brown_cat/idle2.png'),
+                     tk.PhotoImage(file='assets/brown_cat/idle3.png'), tk.PhotoImage(file='assets/brown_cat/idle4.png')]
+
+        self.img = tk.PhotoImage(file='assets/brown_cat/idle1.png')
+        self.frame_index = 0
+
+        # timestamp to check whether to advance frame
+        self.timestamp = time.time()
 
         self.x = int(screen_width * 0.8)
         self.y = work_height - 64
@@ -22,21 +30,17 @@ class Buddy:
 
         # make window frameless
         self.window.overrideredirect(True)
-
         # make window draw over all others
         self.window.attributes('-topmost', True)
-
         # turn black into transparency
         self.window.wm_attributes('-transparentcolor', 'black')
 
         # create a label as a container for our image
         self.label = tk.Label(self.window, bd=0, bg='black')
-
-        # create a window of size 128x128 pixels, at coordinates 0,0
+        # create a window of size 72x64 pixels
         self.window.geometry('72x64+' + str(self.x) + '+' + str(self.y))
-
         # add the image to our label
-        self.label.configure(image=img)
+        self.label.configure(image=self.img)
 
         # give window to geometry manager (so it will appear)
         self.label.pack()
@@ -46,7 +50,21 @@ class Buddy:
         self.window.mainloop()
 
     def update(self):
-        # add code here
+        if time.time() > self.timestamp + 0.45:
+            self.timestamp = time.time()
+            # advance the frame by one, wrap back to 0 at the end
+            self.frame_index = (self.frame_index + 1) % 4
+            self.img = self.idle[self.frame_index]
+
+        # create a window of size 72x64 pixels
+        self.window.geometry('72x64+' + str(self.x) + '+' + str(self.y))
+
+        # add the image to our label
+        self.label.configure(image=self.img)
+
+        # give window to geometry manager (so it will appear)
+        self.label.pack()
+
         self.window.after(10, self.update)
 
 

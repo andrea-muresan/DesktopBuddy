@@ -1,5 +1,5 @@
 import random
-import time
+
 import tkinter as tk
 from win32api import GetMonitorInfo, MonitorFromPoint
 
@@ -14,7 +14,7 @@ class Buddy:
         # create a window
         self.window = tk.Tk()
 
-        # placeholder image
+        # images - frames
         self.idle = [tk.PhotoImage(file='assets/brown_cat/idle1.png'), tk.PhotoImage(file='assets/brown_cat/idle2.png'),
                      tk.PhotoImage(file='assets/brown_cat/idle3.png'), tk.PhotoImage(file='assets/brown_cat/idle4.png')]
 
@@ -38,19 +38,19 @@ class Buddy:
         self.zzz = [tk.PhotoImage(file='assets/brown_cat/zzz1.png'), tk.PhotoImage(file='assets/brown_cat/zzz2.png'),
                     tk.PhotoImage(file='assets/brown_cat/zzz3.png'), tk.PhotoImage(file='assets/brown_cat/zzz4.png')]
 
+        # first animation to display
+        self.state = 2
         self.img = tk.PhotoImage(file='assets/brown_cat/idle1.png')
         self.frame_index = 0
+        self.animation_num = 0
+        self.animation_max = 5      # run the animation 5 times
 
-        self.state = 0
-        # timestamp to check whether to advance frame
-        self.timestamp = time.time()
-
+        # animation's position
         self.x = int(screen_width * 0.8)
         self.y = work_height - 64
 
-        # set focushighlight to black when the window does not have focus
+        # set focus-highlight to black when the window does not have focus
         self.window.config(highlightbackground='black')
-
         # make window frameless
         self.window.overrideredirect(True)
         # make window draw over all others
@@ -64,71 +64,72 @@ class Buddy:
         self.window.geometry('72x64+' + str(self.x) + '+' + str(self.y))
         # add the image to our label
         self.label.configure(image=self.img)
-
         # give window to geometry manager (so it will appear)
         self.label.pack()
 
         # run self.update() after 0ms when mainloop starts
-        self.window.after(1, self.update)
+        self.window.after(0, self.update)
         self.window.mainloop()
 
     def animate(self, array):
-        if time.time() > self.timestamp + 0.3:
-            self.timestamp = time.time()
-            # advance the frame by one, wrap back to 0 at the end
-            self.frame_index = (self.frame_index + 1) % len(array)
-            self.img = array[self.frame_index]
-
+        """
+        Change the frames of an animation
+        :param array: the list of frames
+        """
+        self.window.after(250)
+        self.frame_index = (self.frame_index + 1) % len(array)
+        self.img = array[self.frame_index]
+        if self.frame_index == len(array) - 1:
+            self.animation_num += 1
+        self.event()
 
     def move(self):
+        """
+        Move the buddy left and right
+        """
+        # collision with the right part of the screen
         if self.state == 0:
             if self.x < screen_width - 80:
-                self.x += 1
+                self.x += 5
             if self.x >= screen_width - 80:
                 self.state = 1
                 self.frame_index = 0
+        # collision with the left part of the screen
         elif self.state == 1:
             if self.x > 10:
-                self.x -= 1
+                self.x -= 5
             if self.x <= 10:
                 self.state = 0
                 self.frame_index = 0
 
     def event(self):
-        change_state = int(time.time()) % 70
-        state_prev = self.state
-        if change_state < 7:
-            # stay
-            self.state = 2
-        elif change_state < 17:
-            # go right
-            if self.state not in [0, 1]:
-                self.state = 0
-        elif change_state < 27:
-            # sleep
-            if self.state not in [3, 4]:
-                self.state = 3
-        elif change_state < 32:
-            # stay
-            self.state = 2
-        elif change_state < 47:
-            # go
-            if self.state not in [0, 1]:
-                self.state = 1
-        elif change_state < 53:
-            # stay
-            self.state = 2
-        elif change_state <= 70:
-            # go
-            if self.state not in [0, 1]:  # avoid move function contradiction
-                self.state = 1
+        """
+        The buddy gets a new action to do
+        """
+        if self.animation_num == self.animation_max:
+            if self.state == 0:
+                self.state = random.choices([0, 2], weights=[5, 3])[0]
+            elif self.state == 1:
+                self.state = random.choices([1, 2], weights=[5, 3])[0]
+            elif self.state == 2:
+                self.state = random.choices([0, 1, 2, 3], weights=[2, 2, 2, 1])[0]
+            elif self.state == 3:
+                self.state = 4
+            elif self.state == 4:
+                self.state = random.choices([0, 1, 2, 4], weights=[1, 1, 2, 1])[0]
 
-        if state_prev != self.state:
-            self.frame_index = 0
+            # reset the animation_num and set the duration of the new state (animation_max)
+            self.animation_num = 0
+            if self.state in [0, 1]:
+                self.animation_max = random.randint(7, 15)
+            elif self.state == 2:
+                self.animation_max = random.randint(6, 10)
+            elif self.state == 3:
+                self.animation_max = 0
+            elif self.state == 4:
+                self.animation_max = random.choice([5, 10, 15, 20])
 
     def update(self):
-        self.event()
-
         if self.state == 0:
             self.animate(self.walking_right)
             self.move()
@@ -139,22 +140,17 @@ class Buddy:
             self.animate(self.idle)
         elif self.state == 3:
             self.animate(self.sleeping)
-            if self.frame_index == 5:
-                self.state = 4
         elif self.state == 4:
             self.animate(self.zzz)
 
-
         # create a window of size 72x64 pixels
         self.window.geometry('72x64+' + str(self.x) + '+' + str(self.y))
-
         # add the image to our label
         self.label.configure(image=self.img)
-
         # give window to geometry manager (so it will appear)
         self.label.pack()
 
-        self.window.after(15, self.update)
+        self.window.after(1, self.update)
 
 
 buddy = Buddy()

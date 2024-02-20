@@ -49,6 +49,10 @@ class Buddy:
         self.x = int(screen_width * 0.8)
         self.y = work_height - 64
 
+        # animation's movement
+        self.last_x = None
+        self.last_y = None
+
         # set focus-highlight to black when the window does not have focus
         self.window.config(highlightbackground='black')
         # make window frameless
@@ -66,6 +70,10 @@ class Buddy:
         self.label.configure(image=self.img)
         # give window to geometry manager (so it will appear)
         self.label.pack()
+
+        # Bind mouse events
+        self.label.bind("<ButtonPress-1>", self.start_drag)
+        self.label.bind("<B1-Motion>", self.drag)
 
         # run self.update() after 0ms when mainloop starts
         self.window.after(0, self.update)
@@ -145,12 +153,28 @@ class Buddy:
 
         # create a window of size 72x64 pixels
         self.window.geometry('72x64+' + str(self.x) + '+' + str(self.y))
+
         # add the image to our label
         self.label.configure(image=self.img)
         # give window to geometry manager (so it will appear)
         self.label.pack()
 
         self.window.after(1, self.update)
+
+    def start_drag(self, event):
+        self.state = 2
+        self.last_x = event.x
+        self.last_y = event.y
+
+    def drag(self, event):
+        self.state = 2
+        deltax = int((event.x - self.last_x) * 0.4)
+        deltay = int((event.y - self.last_y) * 0.4)
+        x = self.window.winfo_x() + deltax
+        y = self.window.winfo_y() + deltay
+        self.window.geometry(f"+{x}+{y}")
+        self.x = x
+        self.y = y
 
 
 buddy = Buddy()

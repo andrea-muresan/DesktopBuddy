@@ -172,9 +172,19 @@ class Buddy:
         deltay = int((event.y - self.last_y) * 0.4)
         x = self.window.winfo_x() + deltax
         y = self.window.winfo_y() + deltay
-        self.window.geometry(f"+{x}+{y}")
-        self.x = x
-        self.y = y
+
+        # TODO: add gravity
+        # TODO: add a new state
+
+
+
+        # keep the object inside the screen area
+        if (screen_width - 70) > x > 5 and 0 < y < work_height - 30:
+            print(y)
+            self.window.geometry(f"+{x}+{y}")
+            self.x = x
+            self.y = y
+
 
 
 buddy = Buddy()

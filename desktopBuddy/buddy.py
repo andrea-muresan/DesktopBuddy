@@ -8,7 +8,7 @@ work_area = monitor_info.get('Work')
 screen_width = work_area[2]
 work_height = work_area[3]
 
-
+bottom_y_limit = work_height - 64
 
 class Buddy:
     def __init__(self):
@@ -23,9 +23,7 @@ class Buddy:
 
         self.configure_window()
 
-        self.label.bind("<ButtonPress-1>", self.drag_window)
-        self.label.bind("<ButtonRelease-1>", self.drop_window)
-        self.label.bind("<B1-Motion>", self.on_move_window)
+        self.bind_keypress()
 
         self.run_animation()
 
@@ -42,6 +40,8 @@ class Buddy:
         # Set initial animation state
         self.state = 2
         self.img = self.idle[0]
+        # decide if the object can be animated or not (not if the window is dragged)
+        self.blocked_state = False
 
         # Control the animation change
         self.animation_num = 0
@@ -50,10 +50,7 @@ class Buddy:
 
         # animation's position
         self.x = int(screen_width * 0.8)
-        self.y = work_height - 64
-
-        # decide if the object can be animated or not (not if the window is dragged)
-        self.blocked_state = False
+        self.y = bottom_y_limit
 
     def configure_window(self):
         """Configure window properties"""
@@ -72,6 +69,13 @@ class Buddy:
         self.label.pack()
         # Update window size and position
         self.update_window_geometry()
+
+    def bind_keypress(self):
+        """Bind key presses"""
+        # drag and drop the window
+        self.label.bind("<ButtonPress-1>", self.drag_window)
+        self.label.bind("<ButtonRelease-1>", self.drop_window)
+        self.label.bind("<B1-Motion>", self.on_move_window)
 
     def update_window_geometry(self):
         """Update window size and position"""
@@ -165,10 +169,30 @@ class Buddy:
 
     def drop_window(self, event):
         """Handle dropping the window after dragging"""
-        self.blocked_state = False
         x = event.x_root - self.x
         y = event.y_root - self.y
 
+        x, y = self.window_play_area(x, y)
+
+        self.x = x
+        self.y = y
+        self.update_window_geometry()
+
+        self.window_falling()
+
+    def window_falling(self):
+        """Move the object as it falls"""
+        if self.y == bottom_y_limit:
+            self.blocked_state = False
+        else:
+            self.y += 1
+            self.update_window_geometry()
+            self.window.after(1, self.window_falling)
+
+        self.update()
+
+
+    def window_play_area(self, x, y):
         # Ensure window does not go out of screen bounds
         if x < 0:
             x = 0
@@ -176,32 +200,21 @@ class Buddy:
             x = screen_width - self.window.winfo_width()
         if y < 0:
             y = 0
-        elif y > work_height - self.window.winfo_height():
-            y = work_height - self.window.winfo_height()
+        elif y > bottom_y_limit:
+            y = bottom_y_limit
 
-        self.window.geometry("+%s+%s" % (x, y))
-        self.x = x
-        self.y = y
-        self.update()
+        return x, y
 
     def on_move_window(self, event):
         """Handle moving the window"""
         x = (event.x_root - self.x - self.window.winfo_rootx() + self.window.winfo_rootx())
         y = (event.y_root - self.y - self.window.winfo_rooty() + self.window.winfo_rooty())
 
-        # Ensure window does not go out of screen bounds
-        if x < 0:
-            x = 0
-        elif x > screen_width - self.window.winfo_width():
-            x = screen_width - self.window.winfo_width()
-        if y < 0:
-            y = 0
-        elif y > work_height - self.window.winfo_height():
-            y = work_height - self.window.winfo_height()
+        x, y = self.window_play_area(x, y)
 
         self.window.geometry("+%s+%s" % (x, y))
 
 
-# TODO: add gravity
+# TODO: interact with other windows
 if __name__ == "__main__":
     app = Buddy()

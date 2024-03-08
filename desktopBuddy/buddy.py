@@ -1,6 +1,7 @@
 import random
 
 import tkinter as tk
+import pygetwindow as gw
 from win32api import GetMonitorInfo, MonitorFromPoint
 
 monitor_info = GetMonitorInfo(MonitorFromPoint((0, 0)))
@@ -9,16 +10,16 @@ screen_width = work_area[2]
 work_height = work_area[3]
 
 bottom_y_limit = work_height - 64
+bottom_y_limit = work_height - 64
+
 
 class Buddy:
     def __init__(self):
         # create a window
         self.window = tk.Tk()
 
-        # Load images
         self.load_images()
 
-        # Set initial state
         self.set_initial_state()
 
         self.configure_window()
@@ -52,8 +53,15 @@ class Buddy:
         self.x = int(screen_width * 0.8)
         self.y = bottom_y_limit
 
+        self.last_active_window = None
+        self.last_active_left_x = None
+        self.last_active_right_x = None
+        self.last_active_y = None
+
+
     def configure_window(self):
         """Configure window properties"""
+        self.window.title("Buddy Window")
         # set focus-highlight to black when the window does not have focus
         self.window.config(highlightbackground='black')
         # make window frameless
@@ -143,6 +151,17 @@ class Buddy:
     def update(self):
         """Update the animation and window position"""
         if self.blocked_state is False:
+            if self.last_active_window is not None:
+                if self.y != bottom_y_limit:
+                    if self.last_active_left_x - 20 >= self.x or self.x >= self.last_active_right_x - 50:
+                        self.blocked_state = True
+                        self.window_falling(bottom_y_limit)
+                    elif self.y + self.window.winfo_height() != self.last_active_y:
+                        self.blocked_state = True
+                        self.window_falling(bottom_y_limit)
+
+
+
             if self.state == 0:
                 self.animate(self.walking_right)
                 self.move()
@@ -159,6 +178,8 @@ class Buddy:
             self.window.geometry("+%s+%s" % (self.x, self.y))
             self.label.configure(image=self.img)
             self.label.pack()
+
+            self.get_last_active_window()
             self.window.after(1, self.update)
 
     def drag_window(self, event):
@@ -178,19 +199,18 @@ class Buddy:
         self.y = y
         self.update_window_geometry()
 
-        self.window_falling()
+        self.fall_to_all_windows();
 
-    def window_falling(self):
+    def window_falling(self, bottom_limit):
         """Move the object as it falls"""
-        if self.y == bottom_y_limit:
+        if self.y == bottom_limit:
             self.blocked_state = False
         else:
             self.y += 1
             self.update_window_geometry()
-            self.window.after(1, self.window_falling)
+            self.window.after(1, lambda: self.window_falling(bottom_limit))
 
         self.update()
-
 
     def window_play_area(self, x, y):
         # Ensure window does not go out of screen bounds
@@ -214,7 +234,30 @@ class Buddy:
 
         self.window.geometry("+%s+%s" % (x, y))
 
+    def get_last_active_window(self):
+        # Continuously monitor window activations
+        active_window = gw.getActiveWindow()
+        if active_window and active_window.title != "Buddy Window":
+            self.last_active_window = active_window
+            self.last_active_left_x, self.last_active_y = self.last_active_window.topleft
+            self.last_active_right_x, _ = self.last_active_window.topright
 
-# TODO: interact with other windows
+
+    def fall_to_all_windows(self):
+        target_x_left, target_y = self.last_active_window.topleft
+        target_x_right, _ = self.last_active_window.topright
+
+        # Animate falling towards each visible window
+        if target_x_left - 20 < self.x < target_x_right - 50:
+            if self.y + self.window.winfo_height() < target_y:
+                self.y += 1
+                self.window_falling(target_y - self.window.winfo_height())
+            else:
+                self.window_falling(bottom_y_limit)
+        else:
+            self.window_falling(bottom_y_limit)
+
+
+# TODO: add different image for blocked_state = True
 if __name__ == "__main__":
     app = Buddy()

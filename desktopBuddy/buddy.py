@@ -9,6 +9,7 @@ screen_width = work_area[2]
 work_height = work_area[3]
 
 
+
 class Buddy:
     def __init__(self):
         # create a window
@@ -49,10 +50,6 @@ class Buddy:
         self.x = int(screen_width * 0.8)
         self.y = work_height - 64
 
-        # animation's movement
-        self.last_x = None
-        self.last_y = None
-
         # set focus-highlight to black when the window does not have focus
         self.window.config(highlightbackground='black')
         # make window frameless
@@ -71,13 +68,17 @@ class Buddy:
         # give window to geometry manager (so it will appear)
         self.label.pack()
 
-        # Bind mouse events
-        self.label.bind("<ButtonPress-1>", self.start_drag)
-        self.label.bind("<B1-Motion>", self.drag)
+        self.label.bind("<ButtonPress-1>", self.drag_window)
+        self.label.bind("<ButtonRelease-1>", self.drop_window)
+        self.label.bind("<B1-Motion>", self.on_move_window)
+
+        self.blocked_state = False
 
         # run self.update() after 0ms when mainloop starts
         self.window.after(0, self.update)
         self.window.mainloop()
+
+
 
     def animate(self, array):
         """
@@ -138,53 +139,74 @@ class Buddy:
                 self.animation_max = random.choice([5, 10, 15, 20])
 
     def update(self):
-        if self.state == 0:
-            self.animate(self.walking_right)
-            self.move()
-        elif self.state == 1:
-            self.animate(self.walking_left)
-            self.move()
-        elif self.state == 2:
-            self.animate(self.idle)
-        elif self.state == 3:
-            self.animate(self.sleeping)
-        elif self.state == 4:
-            self.animate(self.zzz)
+        if self.blocked_state is False:
+            if self.state == 0:
+                self.animate(self.walking_right)
+                self.move()
+            elif self.state == 1:
+                self.animate(self.walking_left)
+                self.move()
+            elif self.state == 2:
+                self.animate(self.idle)
+            elif self.state == 3:
+                self.animate(self.sleeping)
+            elif self.state == 4:
+                self.animate(self.zzz)
 
-        # create a window of size 72x64 pixels
-        self.window.geometry('72x64+' + str(self.x) + '+' + str(self.y))
+            # create a window of size 72x64 pixels
+            # self.window.geometry('72x64+' + str(self.x) + '+' + str(self.y))
+            self.window.geometry("+%s+%s" % (self.x, self.y))
 
-        # add the image to our label
-        self.label.configure(image=self.img)
-        # give window to geometry manager (so it will appear)
-        self.label.pack()
+            # add the image to our label
+            self.label.configure(image=self.img)
+            # give window to geometry manager (so it will appear)
+            self.label.pack()
 
-        self.window.after(1, self.update)
+            self.window.after(1, self.update)
 
-    def start_drag(self, event):
-        self.state = 2
-        self.last_x = event.x
-        self.last_y = event.y
+    def drag_window(self, event):
+        self.blocked_state = True
+        self.x = event.x
+        self.y = event.y
 
-    def drag(self, event):
-        self.state = 2
-        deltax = int((event.x - self.last_x) * 0.4)
-        deltay = int((event.y - self.last_y) * 0.4)
-        x = self.window.winfo_x() + deltax
-        y = self.window.winfo_y() + deltay
+    def drop_window(self, event):
+        self.blocked_state = False
+        x = event.x_root - self.x
+        y = event.y_root - self.y
 
-        # TODO: add gravity
-        # TODO: add a new state
+        # Ensure window does not go out of screen bounds
+        if x < 0:
+            x = 0
+        elif x > screen_width - self.window.winfo_width():
+            x = screen_width - self.window.winfo_width()
+        if y < 0:
+            y = 0
+        elif y > work_height - self.window.winfo_height():
+            y = work_height - self.window.winfo_height()
+
+        self.window.geometry("+%s+%s" % (x, y))
+        self.x = x
+        self.y = y
+        self.update()
 
 
 
-        # keep the object inside the screen area
-        if (screen_width - 70) > x > 5 and 0 < y < work_height - 30:
-            print(y)
-            self.window.geometry(f"+{x}+{y}")
-            self.x = x
-            self.y = y
+    def on_move_window(self, event):
+        x = (event.x_root - self.x - self.window.winfo_rootx() + self.window.winfo_rootx())
+        y = (event.y_root - self.y - self.window.winfo_rooty() + self.window.winfo_rooty())
+
+        # Ensure window does not go out of screen bounds
+        if x < 0:
+            x = 0
+        elif x > screen_width - self.window.winfo_width():
+            x = screen_width - self.window.winfo_width()
+        if y < 0:
+            y = 0
+        elif y > work_height - self.window.winfo_height():
+            y = work_height - self.window.winfo_height()
+
+        self.window.geometry("+%s+%s" % (x, y))
 
 
-
+# TODO: add gravity
 buddy = Buddy()

@@ -15,41 +15,48 @@ class Buddy:
         # create a window
         self.window = tk.Tk()
 
-        # images - frames
-        self.idle = [tk.PhotoImage(file='assets/brown_cat/idle1.png'), tk.PhotoImage(file='assets/brown_cat/idle2.png'),
-                     tk.PhotoImage(file='assets/brown_cat/idle3.png'), tk.PhotoImage(file='assets/brown_cat/idle4.png')]
+        # Load images
+        self.load_images()
 
-        self.walking_left = [tk.PhotoImage(file='assets/brown_cat/walkingleft1.png'),
-                             tk.PhotoImage(file='assets/brown_cat/walkingleft2.png'),
-                             tk.PhotoImage(file='assets/brown_cat/walkingleft3.png'),
-                             tk.PhotoImage(file='assets/brown_cat/walkingleft4.png')]
+        # Set initial state
+        self.set_initial_state()
 
-        self.walking_right = [tk.PhotoImage(file='assets/brown_cat/walkingright1.png'),
-                              tk.PhotoImage(file='assets/brown_cat/walkingright2.png'),
-                              tk.PhotoImage(file='assets/brown_cat/walkingright3.png'),
-                              tk.PhotoImage(file='assets/brown_cat/walkingright4.png')]
+        self.configure_window()
 
-        self.sleeping = [tk.PhotoImage(file='assets/brown_cat/sleeping1.png'),
-                         tk.PhotoImage(file='assets/brown_cat/sleeping2.png'),
-                         tk.PhotoImage(file='assets/brown_cat/sleeping3.png'),
-                         tk.PhotoImage(file='assets/brown_cat/sleeping4.png'),
-                         tk.PhotoImage(file='assets/brown_cat/sleeping5.png'),
-                         tk.PhotoImage(file='assets/brown_cat/sleeping6.png')]
+        self.label.bind("<ButtonPress-1>", self.drag_window)
+        self.label.bind("<ButtonRelease-1>", self.drop_window)
+        self.label.bind("<B1-Motion>", self.on_move_window)
 
-        self.zzz = [tk.PhotoImage(file='assets/brown_cat/zzz1.png'), tk.PhotoImage(file='assets/brown_cat/zzz2.png'),
-                    tk.PhotoImage(file='assets/brown_cat/zzz3.png'), tk.PhotoImage(file='assets/brown_cat/zzz4.png')]
+        self.run_animation()
 
-        # first animation to display
+    def load_images(self):
+        """Load images for animations"""
+        self.idle = [tk.PhotoImage(file=f'assets/brown_cat/idle{i}.png') for i in range(1, 5)]
+        self.walking_left = [tk.PhotoImage(file=f'assets/brown_cat/walkingleft{i}.png') for i in range(1, 5)]
+        self.walking_right = [tk.PhotoImage(file=f'assets/brown_cat/walkingright{i}.png') for i in range(1, 5)]
+        self.sleeping = [tk.PhotoImage(file=f'assets/brown_cat/sleeping{i}.png') for i in range(1, 7)]
+        self.zzz = [tk.PhotoImage(file=f'assets/brown_cat/zzz{i}.png') for i in range(1, 5)]
+
+    def set_initial_state(self):
+        """Initialize animation state variables"""
+        # Set initial animation state
         self.state = 2
-        self.img = tk.PhotoImage(file='assets/brown_cat/idle1.png')
-        self.frame_index = 0
+        self.img = self.idle[0]
+
+        # Control the animation change
         self.animation_num = 0
-        self.animation_max = 5      # run the animation 5 times
+        self.animation_max = 5  # run the animation 5 times
+        self.frame_index = 0
 
         # animation's position
         self.x = int(screen_width * 0.8)
         self.y = work_height - 64
 
+        # decide if the object can be animated or not (not if the window is dragged)
+        self.blocked_state = False
+
+    def configure_window(self):
+        """Configure window properties"""
         # set focus-highlight to black when the window does not have focus
         self.window.config(highlightbackground='black')
         # make window frameless
@@ -61,24 +68,19 @@ class Buddy:
 
         # create a label as a container for our image
         self.label = tk.Label(self.window, bd=0, bg='black')
-        # create a window of size 72x64 pixels
-        self.window.geometry('72x64+' + str(self.x) + '+' + str(self.y))
-        # add the image to our label
-        self.label.configure(image=self.img)
         # give window to geometry manager (so it will appear)
         self.label.pack()
+        # Update window size and position
+        self.update_window_geometry()
 
-        self.label.bind("<ButtonPress-1>", self.drag_window)
-        self.label.bind("<ButtonRelease-1>", self.drop_window)
-        self.label.bind("<B1-Motion>", self.on_move_window)
+    def update_window_geometry(self):
+        """Update window size and position"""
+        self.window.geometry('72x64+' + str(self.x) + '+' + str(self.y))
 
-        self.blocked_state = False
-
-        # run self.update() after 0ms when mainloop starts
+    def run_animation(self):
+        """Start animation loop"""
         self.window.after(0, self.update)
         self.window.mainloop()
-
-
 
     def animate(self, array):
         """
@@ -90,12 +92,10 @@ class Buddy:
         self.img = array[self.frame_index]
         if self.frame_index == len(array) - 1:
             self.animation_num += 1
-        self.event()
+        self.handle_event()
 
     def move(self):
-        """
-        Move the buddy left and right
-        """
+        """Move the buddy left and right"""
         # collision with the right part of the screen
         if self.state == 0:
             if self.x < screen_width - 80:
@@ -111,10 +111,8 @@ class Buddy:
                 self.state = 0
                 self.frame_index = 0
 
-    def event(self):
-        """
-        The buddy gets a new action to do
-        """
+    def handle_event(self):
+        """Determine the next action for the buddy"""
         if self.animation_num == self.animation_max:
             if self.state == 0:
                 self.state = random.choices([0, 2], weights=[5, 3])[0]
@@ -139,6 +137,7 @@ class Buddy:
                 self.animation_max = random.choice([5, 10, 15, 20])
 
     def update(self):
+        """Update the animation and window position"""
         if self.blocked_state is False:
             if self.state == 0:
                 self.animate(self.walking_right)
@@ -153,23 +152,19 @@ class Buddy:
             elif self.state == 4:
                 self.animate(self.zzz)
 
-            # create a window of size 72x64 pixels
-            # self.window.geometry('72x64+' + str(self.x) + '+' + str(self.y))
             self.window.geometry("+%s+%s" % (self.x, self.y))
-
-            # add the image to our label
             self.label.configure(image=self.img)
-            # give window to geometry manager (so it will appear)
             self.label.pack()
-
             self.window.after(1, self.update)
 
     def drag_window(self, event):
+        """Handle dragging the window"""
         self.blocked_state = True
         self.x = event.x
         self.y = event.y
 
     def drop_window(self, event):
+        """Handle dropping the window after dragging"""
         self.blocked_state = False
         x = event.x_root - self.x
         y = event.y_root - self.y
@@ -189,9 +184,8 @@ class Buddy:
         self.y = y
         self.update()
 
-
-
     def on_move_window(self, event):
+        """Handle moving the window"""
         x = (event.x_root - self.x - self.window.winfo_rootx() + self.window.winfo_rootx())
         y = (event.y_root - self.y - self.window.winfo_rooty() + self.window.winfo_rooty())
 
@@ -209,4 +203,5 @@ class Buddy:
 
 
 # TODO: add gravity
-buddy = Buddy()
+if __name__ == "__main__":
+    app = Buddy()
